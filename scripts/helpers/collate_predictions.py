@@ -7,13 +7,27 @@ from ast import literal_eval
 from bisect import bisect_left, bisect_right
 from dataclasses import dataclass, field
 from typing import Literal
+import sys
 
 import h5py
 import numpy as np
 import pandas as pd
+import yaml
 from tqdm import tqdm
-
+from pathlib import Path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from music_df.script_helpers import read_config_oc
+
+import re
+import math
+
+def _parse_index_field(s) -> list[int]:
+    # Handle already-parsed lists
+ 
+   
+    res = [int(x[1:][:-1]) for x in re.findall(r'\(\d+\)', s)]
+    # Extract all integers; works for "[np.int64(2), ...]", "[1, 2]", "array([1,2])", "range(…)", etc.
+    return res
 
 # "midpoint": take the left predictions up to the midpoint of the overlap, then take
 #   the right predictions
@@ -58,6 +72,25 @@ class Config:
     features_to_skip: list[str] = field(default_factory=lambda: [])
     subfolder_name: str = "predictions"
 
+def _load_yaml(path: Path) -> dict:
+    raw = path.read_text()
+    if path.suffix.lower() in (".yml", ".yaml"):
+        data = yaml.safe_load(raw) or {}
+    return data
+
+def load_config(path: str | os.PathLike) -> Config:
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(f"Config file not found: {p}")
+    data = _load_yaml(p)
+    # allow hyphenated keys in file
+    data = {k.replace("-", "_"): v for k, v in data.items()}
+    # validate keys
+    valid = set(Config.__annotations__.keys())
+    unknown = set(data) - valid
+    if unknown:
+        raise ValueError(f"Unknown config keys: {sorted(unknown)}")
+    return Config(**data)
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -69,7 +102,9 @@ def parse_args():
 def merge_token_predictions_and_indices(
     predictions: list[str], indices: list[str], config: Config
 ):
-    int_indices: list[list[int]] = [literal_eval(i) for i in indices]
+    #int_indices: list[list[int]] = [literal_eval(i) for i in indices]
+    # extract integer values from np.64(i) format
+    int_indices: list[list[int]] = [_parse_index_field(i) for i in indices]
     split_predictions: list[list[str]] = [p.strip().split() for p in predictions]
     # The assumption is that the segmentation of the indices is straightforward in
     #   that they are in the same order in each segment.
@@ -120,7 +155,7 @@ def merge_token_predictions_and_indices(
 def merge_logits_and_indices(
     logits_list: list[np.ndarray], indices: list[str], config: Config
 ):
-    int_indices: list[list[int]] = [literal_eval(i) for i in indices]
+    int_indices: list[list[int]] = [_parse_index_field(i) for i in indices]
     # The assumption is that the segmentation of the indices is straightforward in
     #   that they are in the same order in each segment.
 
@@ -190,11 +225,7 @@ def merge_logits_and_indices(
                 )
                 overlap = left + right
                 out_predictions = np.concatenate(
-                    [
-                        out_predictions[:left_overlap_i],
-                        overlap,
-                        logits[right_overlap_i:],
-                    ],
+                    [out_predictions[:left_overlap_i], overlap, logits[right_overlap_i:]],
                     axis=0,
                 )
             else:
@@ -221,10 +252,11 @@ def handle_metadata(metadata_rows, reference_df: pd.DataFrame | None, config: Co
         return reference_df
 
 
-def main():
-    args, remaining = parse_args()
-    config = read_config_oc(args.config_file, remaining, Config)
+def main(config):
+    #args, remaining = parse_args()
+    #config = read_config_oc(args.config_file, Config)
     metadata_df = pd.read_csv(config.metadata, index_col=0).reset_index(drop=True)
+    print(metadata_df["df_indices"].head(1).tolist())
 
     # (Malcolm 2024-01-08) There's no reason to be predicting on augmented
     #   data, which might lead to headaches.
@@ -359,4 +391,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    cfg =load_config("collate_params.yaml")
+   # args = parser.parse_args()
+
+    main(cfg)

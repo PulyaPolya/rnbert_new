@@ -17,7 +17,6 @@ if DEBUG:
 
     sys.excepthook = custom_excepthook
 
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("input_files", nargs="+")
@@ -63,6 +62,7 @@ def main():
         y_pred = np.concatenate(
             [np.array(ast.literal_eval(x)) for x in df["predicted"]]
         )
+        y_pred = y_pred + 4       # adding 4 because of the shift in labels
     else:
         df = pd.read_csv(args.input_files[0])
         paths_df_indices = df[["path", "indices"]]
@@ -89,8 +89,8 @@ def main():
         ]
 
         y_true = ["_".join(str(x) for x in xs) for xs in zip(*y_trues)]
-        y_pred = ["_".join(str(x) for x in xs) for xs in zip(*y_preds)]
-
+        
+        y_pred = ["_".join(str(x + 4) for x in xs) for xs in zip(*y_preds)]  # adding 4 because of the shift in labels
     if args.uniform_steps:
         if args.uniform_steps_csv:
             uniform_step_df = pd.read_csv(args.uniform_steps_csv)
@@ -123,6 +123,7 @@ def main():
     # precision, recall, f1, support = sklearn.metrics.precision_recall_fscore_support(
     #     y_true, y_pred, average="weighted"
     # )
+
     accuracy = sklearn.metrics.accuracy_score(y_true, y_pred)
     print(f"{accuracy=:.5}")
     balanced_accuracy = sklearn.metrics.balanced_accuracy_score(y_true, y_pred)
