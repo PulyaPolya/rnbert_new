@@ -252,11 +252,12 @@ def handle_metadata(metadata_rows, reference_df: pd.DataFrame | None, config: Co
         return reference_df
 
 
-def main(config):
-    #args, remaining = parse_args()
-    #config = read_config_oc(args.config_file, Config)
+def main():
+    args, remaining = parse_args()
+    config = read_config_oc(args.config_file,remaining, Config)
     metadata_df = pd.read_csv(config.metadata, index_col=0).reset_index(drop=True)
-    print(metadata_df["df_indices"].head(1).tolist())
+    #print(metadata_df["df_indices"].head(1).tolist())
+    print(config)
 
     # (Malcolm 2024-01-08) There's no reason to be predicting on augmented
     #   data, which might lead to headaches.
@@ -391,7 +392,4 @@ def main(config):
 
 
 if __name__ == "__main__":
-    cfg =load_config("collate_params.yaml")
-   # args = parser.parse_args()
-
-    main(cfg)
+    main()
