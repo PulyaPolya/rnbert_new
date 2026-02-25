@@ -31,7 +31,6 @@ _PC_TO_TONIC = {
 
 def _format_alt_for_music21(alt: str) -> str:
     """
-    Map your accidental symbols to something music21 understands.
     - 'x'  -> '##' (double sharp)
     - 'xb' -> 'bb' (double flat)
     """
@@ -161,7 +160,7 @@ def _build_rn_main(primary_deg_full: str, quality: str, inversion: str) -> str:
 
 def chord_string_to_music21(chord_str: str) -> roman.RomanNumeral:
     """
-    Convert your RN encoding string, e.g.
+    Convert RN encoding string, e.g.
       'Mm7_2.0_6.0M__V_I'
       'o7_3.0_0.0M_#VII_VI'
       'aug6_1.0_9.0M__xbVII'
@@ -225,7 +224,7 @@ def split_rn(rn):
     return quality, inversion, key_pc_mode, degree
 
 
-def get_function_percentage(all_label_values, all_predicted_values):
+def get_function_percentage(all_label_values, all_predicted_values, onlyHauptHarmonicFunction= False):
     total_size = len(all_label_values)
     not_same = 0
     same_function = 0
@@ -236,8 +235,8 @@ def get_function_percentage(all_label_values, all_predicted_values):
             pred_rn = chord_string_to_music21(all_predicted_values[i])
             if true_rn != pred_rn:
                 not_same += 1
-                hf_true = hf.romanToFunction(true_rn, onlyHauptHarmonicFunction=True)
-                hf_pred = hf.romanToFunction(pred_rn, onlyHauptHarmonicFunction=True) 
+                hf_true = hf.romanToFunction(true_rn, onlyHauptHarmonicFunction=onlyHauptHarmonicFunction)
+                hf_pred = hf.romanToFunction(pred_rn, onlyHauptHarmonicFunction=onlyHauptHarmonicFunction) 
                 if hf_true == hf_pred:
                     same_function += 1
         except Exception as e:
@@ -315,4 +314,4 @@ print(f"The worst pieces with accuracy < {lower} are:")
 print(df[df["accuracy"] < lower]["path"].values)
 print(f"The best pieces with accuracy >{upper} are:")
 print(df[df["accuracy"] > upper]["path"].values)
-get_function_percentage(all_label_values, all_predicted_values)
+get_function_percentage(all_label_values, all_predicted_values, onlyHauptHarmonicFunction= False)
